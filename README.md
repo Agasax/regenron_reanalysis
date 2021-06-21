@@ -1,2 +1,159 @@
-# regenron_reanalysis
-Bayesian reanalysis of RECOVERY REGEN-COV
+RECOVERY REGEN-COV Bayesian reanalysis
+================
+Lars Mølgaard Saxhaug
+6/21/2021
+
+#### Setup
+
+``` r
+library(tidyverse)
+library(brms)
+library(tidybayes)
+library(here)
+theme_set(theme_tidybayes())
+```
+
+#### Data entry
+
+``` r
+regenron <- tribble(
+  ~"group", ~"intervention", ~"death", ~"n",
+  "seropos", "regenron", 411, 2636,
+  "seropos", "control", 383, 2636,
+  "seroneg", "regenron", 396, 1633,
+  "seroneg", "control", 451, 1520,
+  "unknown", "regenron", 137, 570,
+  "unknown", "control", 192, 790
+) %>% mutate(across(where(is.character), as.factor))
+```
+
+#### Sample prior
+
+``` r
+mr_prior <- brm(death | trials(n) ~ -1 + group + intervention + intervention * group,
+  family = binomial(), data = regenron,
+  prior = prior(normal(0, 1.5), class = "b"),
+  sample_prior = "only",
+  file = here("model_fits","mr_prior"),
+  file_refit = "on_change"
+)
+summary(mr_prior)
+```
+
+    ##  Family: binomial 
+    ##   Links: mu = logit 
+    ## Formula: death | trials(n) ~ -1 + group + intervention + intervention * group 
+    ##    Data: regenron (Number of observations: 6) 
+    ## Samples: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
+    ##          total post-warmup samples = 4000
+    ## 
+    ## Population-Level Effects: 
+    ##                                   Estimate Est.Error l-95% CI u-95% CI Rhat
+    ## groupseroneg                          0.02      1.49    -2.92     3.00 1.00
+    ## groupseropos                          0.04      1.51    -2.87     2.92 1.00
+    ## groupunknown                         -0.02      1.54    -2.99     2.96 1.00
+    ## interventionregenron                  0.02      1.49    -2.92     2.86 1.00
+    ## groupseropos:interventionregenron     0.02      1.51    -2.96     2.98 1.00
+    ## groupunknown:interventionregenron     0.00      1.44    -2.76     2.78 1.00
+    ##                                   Bulk_ESS Tail_ESS
+    ## groupseroneg                          6220     3376
+    ## groupseropos                          5556     3273
+    ## groupunknown                          6174     3253
+    ## interventionregenron                  6015     3041
+    ## groupseropos:interventionregenron     6138     2969
+    ## groupunknown:interventionregenron     5488     3220
+    ## 
+    ## Samples were drawn using sampling(NUTS). For each parameter, Bulk_ESS
+    ## and Tail_ESS are effective sample size measures, and Rhat is the potential
+    ## scale reduction factor on split chains (at convergence, Rhat = 1).
+
+``` r
+plot(mr_prior)
+```
+
+![](README_files/figure-gfm/prior_sampling-1.png)<!-- -->![](README_files/figure-gfm/prior_sampling-2.png)<!-- -->
+
+#### Sample model
+
+``` r
+mr <- brm(death | trials(n) ~ -1 + group + intervention + intervention * group, 
+          family = binomial(), 
+          data = regenron, 
+          prior = prior(normal(0, 1.5), class = "b"),
+          file = here("model_fits","mr"),
+          file_refit = "on_change")
+summary(mr)
+```
+
+    ##  Family: binomial 
+    ##   Links: mu = logit 
+    ## Formula: death | trials(n) ~ -1 + group + intervention + intervention * group 
+    ##    Data: regenron (Number of observations: 6) 
+    ## Samples: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
+    ##          total post-warmup samples = 4000
+    ## 
+    ## Population-Level Effects: 
+    ##                                   Estimate Est.Error l-95% CI u-95% CI Rhat
+    ## groupseroneg                         -0.86      0.06    -0.98    -0.75 1.00
+    ## groupseropos                         -1.77      0.05    -1.87    -1.67 1.00
+    ## groupunknown                         -1.14      0.08    -1.30    -0.98 1.00
+    ## interventionregenron                 -0.28      0.08    -0.43    -0.11 1.00
+    ## groupseropos:interventionregenron     0.36      0.11     0.13     0.58 1.00
+    ## groupunknown:interventionregenron     0.26      0.15    -0.04     0.55 1.00
+    ##                                   Bulk_ESS Tail_ESS
+    ## groupseroneg                          2248     2560
+    ## groupseropos                          2539     2567
+    ## groupunknown                          2770     2765
+    ## interventionregenron                  1909     1806
+    ## groupseropos:interventionregenron     1849     2269
+    ## groupunknown:interventionregenron     2078     2491
+    ## 
+    ## Samples were drawn using sampling(NUTS). For each parameter, Bulk_ESS
+    ## and Tail_ESS are effective sample size measures, and Rhat is the potential
+    ## scale reduction factor on split chains (at convergence, Rhat = 1).
+
+``` r
+plot(mr)
+```
+
+![](README_files/figure-gfm/model_sampling-1.png)<!-- -->![](README_files/figure-gfm/model_sampling-2.png)<!-- -->
+
+#### Comptute and plot posterior for absolute difference
+
+``` r
+regenron %>% # original data
+  modelr::data_grid(group, intervention) %>% # generate new data
+  mutate(n = 1) %>% # n is the number of trials
+  add_fitted_draws(mr) %>% # compute draws from the linear predictor for model `mr`, replace with `mr_prior` for prior prediction
+  mutate(.value = brms::inv_logit_scaled(.value)) %>% # inverse logit transformation to probability scale
+  compare_levels(.value, by = intervention, fun = `-`) %>% # calculate absolute risk reduction per group
+  ggplot(aes(x = .value, y = group, fill = after_stat(ifelse(x > 0, "over", "under")))) +
+  stat_halfeye() +
+  scale_fill_manual(values = c("over" = "pink", "under" = "skyblue")) +
+  theme(legend.position = "none") +
+  scale_y_discrete(name = "Group") +
+  scale_x_continuous(name = "Absolute risk difference (28d mortality)") +
+  labs(title = "REGEN-COV", subtitle = "Bayesian logistic regression, minimally informative sceptical prior", caption = "@load_dependent")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-1-1.png)<!-- -->
+
+#### Posterior probality of ANY benefit, per group
+
+``` r
+  regenron %>% 
+    modelr::data_grid(group,intervention) %>% 
+    mutate(n=1) %>% 
+    add_fitted_draws(mr) %>% 
+    compare_levels(.value,by=intervention) %>% 
+    mutate(or=exp(.value)) %>% 
+    group_by(group) %>% 
+    summarise(p_superiority=sum(or<1)/n()) %>% 
+    knitr::kable()
+```
+
+| group   | p\_superiority |
+| :------ | -------------: |
+| seroneg |        1.00000 |
+| seropos |        0.14725 |
+| unknown |        0.55625 |

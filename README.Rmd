@@ -1,0 +1,92 @@
+---
+title: "RECOVERY REGEN-COV Bayesian reanalysis"
+author: "Lars Mølgaard Saxhaug"
+date: "6/21/2021"
+output: github_document
+---
+
+#### Setup
+
+```{r setup, include=TRUE,message=FALSE}
+library(tidyverse)
+library(brms)
+library(tidybayes)
+library(here)
+theme_set(theme_tidybayes())
+```
+
+#### Data entry
+
+```{r data_entry}
+regenron <- tribble(
+  ~"group", ~"intervention", ~"death", ~"n",
+  "seropos", "regenron", 411, 2636,
+  "seropos", "control", 383, 2636,
+  "seroneg", "regenron", 396, 1633,
+  "seroneg", "control", 451, 1520,
+  "unknown", "regenron", 137, 570,
+  "unknown", "control", 192, 790
+) %>% mutate(across(where(is.character), as.factor))
+
+```
+
+#### Sample prior
+
+```{r prior_sampling}
+mr_prior <- brm(death | trials(n) ~ -1 + group + intervention + intervention * group,
+  family = binomial(), data = regenron,
+  prior = prior(normal(0, 1.5), class = "b"),
+  sample_prior = "only",
+  file = here("model_fits","mr_prior"),
+  file_refit = "on_change"
+)
+summary(mr_prior)
+plot(mr_prior)
+```
+
+#### Sample model
+
+```{r model_sampling}
+mr <- brm(death | trials(n) ~ -1 + group + intervention + intervention * group, 
+          family = binomial(), 
+          data = regenron, 
+          prior = prior(normal(0, 1.5), class = "b"),
+          file = here("model_fits","mr"),
+          file_refit = "on_change")
+summary(mr)
+plot(mr)
+```
+
+#### Comptute and plot posterior for absolute difference
+
+```{r}
+regenron %>% # original data
+  modelr::data_grid(group, intervention) %>% # generate new data
+  mutate(n = 1) %>% # n is the number of trials
+  add_fitted_draws(mr) %>% # compute draws from the linear predictor for model `mr`, replace with `mr_prior` for prior prediction
+  mutate(.value = brms::inv_logit_scaled(.value)) %>% # inverse logit transformation to probability scale
+  compare_levels(.value, by = intervention, fun = `-`) %>% # calculate absolute risk reduction per group
+  ggplot(aes(x = .value, y = group, fill = after_stat(ifelse(x > 0, "over", "under")))) +
+  stat_halfeye() +
+  scale_fill_manual(values = c("over" = "pink", "under" = "skyblue")) +
+  theme(legend.position = "none") +
+  scale_y_discrete(name = "Group") +
+  scale_x_continuous(name = "Absolute risk difference (28d mortality)") +
+  labs(title = "REGEN-COV", subtitle = "Bayesian logistic regression, minimally informative sceptical prior", caption = "@load_dependent")
+
+
+```
+
+#### Posterior probality of ANY benefit, per group
+
+```{r}
+  regenron %>% 
+    modelr::data_grid(group,intervention) %>% 
+    mutate(n=1) %>% 
+    add_fitted_draws(mr) %>% 
+    compare_levels(.value,by=intervention) %>% 
+    mutate(or=exp(.value)) %>% 
+    group_by(group) %>% 
+    summarise(p_superiority=sum(or<1)/n()) %>% 
+    knitr::kable()
+```
