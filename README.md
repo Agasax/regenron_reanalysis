@@ -1,7 +1,7 @@
 RECOVERY REGEN-COV Bayesian reanalysis
 ================
 Lars Mølgaard Saxhaug
-6/21/2021
+6/25/2021
 
 #### Setup
 
@@ -30,11 +30,11 @@ regenron <- tribble(
 #### Sample prior
 
 ``` r
-mr_prior <- brm(death | trials(n) ~ -1 +  intervention * group,
+mr_prior <- brm(death | trials(n) ~ 0 + intervention * group, # formula without intercept
   family = binomial(), data = regenron,
   prior = prior(normal(0, 1.5), class = "b"),
   sample_prior = "only",
-  file = here("model_fits","mr_prior"),
+  file = here("model_fits", "mr_prior"),
   file_refit = "on_change"
 )
 summary(mr_prior)
@@ -76,12 +76,14 @@ plot(mr_prior)
 #### Sample model
 
 ``` r
-mr <- brm(death | trials(n) ~ -1+ intervention * group, 
-          family = binomial(), 
-          data = regenron, 
-          prior = prior(normal(0, 1.5), class = "b"),
-          file = here("model_fits","mr"),
-          file_refit = "on_change")
+mr <- brm(death | trials(n) ~ 0 + intervention * group,
+  family = binomial(),
+  data = regenron,
+  prior = prior(normal(0, 1.5), class = "b"),
+  file = here("model_fits", "mr"),
+  file_refit = "on_change"
+)
+
 summary(mr)
 ```
 
@@ -113,7 +115,7 @@ summary(mr)
     ## scale reduction factor on split chains (at convergence, Rhat = 1).
 
 ``` r
-plot(mr)
+plot(mr, ask = FALSE)
 ```
 
 ![](README_files/figure-gfm/model_sampling-1.png)<!-- -->![](README_files/figure-gfm/model_sampling-2.png)<!-- -->
@@ -141,19 +143,20 @@ regenron %>% # original data
 #### Posterior probality of ANY benefit, per group
 
 ``` r
-  regenron %>% 
-    modelr::data_grid(group,intervention) %>% 
-    mutate(n=1) %>% 
-    add_fitted_draws(mr) %>% 
-    compare_levels(.value,by=intervention) %>% 
-    mutate(or=exp(.value)) %>% 
-    group_by(group) %>% 
-    summarise(p_superiority=sum(or<1)/n()) %>% 
-    knitr::kable()
+regenron %>%
+  modelr::data_grid(group, intervention) %>%
+  mutate(n = 1) %>%
+  add_fitted_draws(mr) %>%
+  compare_levels(.value, by = intervention) %>%
+  mutate(or = exp(.value)) %>%
+  group_by(group) %>%
+  summarise(`Probability of superiority` = mean(or < 1)) %>%
+  mutate(group=str_to_title(group)) %>% 
+  knitr::kable(col.names = c("Group","Probability of superiority"))
 ```
 
-| group   | p\_superiority |
-| :------ | -------------: |
-| seroneg |        0.99975 |
-| seropos |        0.13950 |
-| unknown |        0.53875 |
+| Group   | Probability of superiority |
+| :------ | -------------------------: |
+| Seroneg |                    0.99975 |
+| Seropos |                    0.13950 |
+| Unknown |                    0.53875 |
