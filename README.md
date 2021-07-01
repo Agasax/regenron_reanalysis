@@ -42,26 +42,26 @@ summary(mr_prior)
 
     ##  Family: binomial 
     ##   Links: mu = logit 
-    ## Formula: death | trials(n) ~ -1 + intervention * group 
+    ## Formula: death | trials(n) ~ 0 + intervention * group 
     ##    Data: regenron (Number of observations: 6) 
     ## Samples: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
     ##          total post-warmup samples = 4000
     ## 
     ## Population-Level Effects: 
     ##                                   Estimate Est.Error l-95% CI u-95% CI Rhat
-    ## interventioncontrol                   0.03      1.47    -2.87     2.89 1.00
-    ## interventionregenron                  0.02      1.47    -2.81     2.96 1.00
-    ## groupseropos                         -0.02      1.52    -2.98     2.98 1.00
-    ## groupunknown                          0.03      1.50    -2.92     2.93 1.00
-    ## interventionregenron:groupseropos     0.01      1.49    -2.84     2.90 1.00
-    ## interventionregenron:groupunknown    -0.02      1.54    -3.08     3.05 1.00
+    ## interventioncontrol                   0.01      1.49    -2.92     2.98 1.00
+    ## interventionregenron                  0.01      1.53    -2.87     2.99 1.00
+    ## groupseropos                          0.03      1.49    -2.92     2.94 1.00
+    ## groupunknown                          0.04      1.48    -2.88     2.95 1.00
+    ## interventionregenron:groupseropos    -0.02      1.49    -2.90     3.06 1.00
+    ## interventionregenron:groupunknown     0.01      1.47    -2.93     2.87 1.00
     ##                                   Bulk_ESS Tail_ESS
-    ## interventioncontrol                   4909     3070
-    ## interventionregenron                  5324     3020
-    ## groupseropos                          5736     3195
-    ## groupunknown                          4400     3207
-    ## interventionregenron:groupseropos     6378     3311
-    ## interventionregenron:groupunknown     5830     2973
+    ## interventioncontrol                   5281     3106
+    ## interventionregenron                  5736     2904
+    ## groupseropos                          5755     2798
+    ## groupunknown                          5663     3251
+    ## interventionregenron:groupseropos     5337     2688
+    ## interventionregenron:groupunknown     5554     2736
     ## 
     ## Samples were drawn using sampling(NUTS). For each parameter, Bulk_ESS
     ## and Tail_ESS are effective sample size measures, and Rhat is the potential
@@ -89,26 +89,26 @@ summary(mr)
 
     ##  Family: binomial 
     ##   Links: mu = logit 
-    ## Formula: death | trials(n) ~ -1 + intervention * group 
+    ## Formula: death | trials(n) ~ 0 + intervention * group 
     ##    Data: regenron (Number of observations: 6) 
     ## Samples: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
     ##          total post-warmup samples = 4000
     ## 
     ## Population-Level Effects: 
     ##                                   Estimate Est.Error l-95% CI u-95% CI Rhat
-    ## interventioncontrol                  -0.86      0.06    -0.98    -0.76 1.00
-    ## interventionregenron                 -1.14      0.06    -1.25    -1.02 1.00
-    ## groupseropos                         -0.91      0.08    -1.07    -0.75 1.00
-    ## groupunknown                         -0.27      0.10    -0.46    -0.07 1.00
-    ## interventionregenron:groupseropos     0.36      0.11     0.13     0.57 1.00
-    ## interventionregenron:groupunknown     0.26      0.15    -0.04     0.55 1.00
+    ## interventioncontrol                  -0.86      0.06    -0.98    -0.75 1.00
+    ## interventionregenron                 -1.14      0.06    -1.26    -1.03 1.00
+    ## groupseropos                         -0.91      0.08    -1.07    -0.76 1.00
+    ## groupunknown                         -0.27      0.10    -0.47    -0.08 1.00
+    ## interventionregenron:groupseropos     0.36      0.11     0.14     0.58 1.00
+    ## interventionregenron:groupunknown     0.25      0.15    -0.04     0.55 1.00
     ##                                   Bulk_ESS Tail_ESS
-    ## interventioncontrol                   2337     2811
-    ## interventionregenron                  2656     2585
-    ## groupseropos                          2280     2098
-    ## groupunknown                          2520     2993
-    ## interventionregenron:groupseropos     2032     2151
-    ## interventionregenron:groupunknown     2395     2875
+    ## interventioncontrol                   1980     2457
+    ## interventionregenron                  2800     2430
+    ## groupseropos                          2049     2583
+    ## groupunknown                          2226     2449
+    ## interventionregenron:groupseropos     2062     2423
+    ## interventionregenron:groupunknown     2200     2398
     ## 
     ## Samples were drawn using sampling(NUTS). For each parameter, Bulk_ESS
     ## and Tail_ESS are effective sample size measures, and Rhat is the potential
@@ -156,7 +156,7 @@ regenron %>%
 ```
 
 | Group   | Probability of superiority |
-| :------ | -------------------------: |
+|:--------|---------------------------:|
 | Seroneg |                    0.99975 |
-| Seropos |                    0.13950 |
-| Unknown |                    0.53875 |
+| Seropos |                    0.15125 |
+| Unknown |                    0.56750 |
